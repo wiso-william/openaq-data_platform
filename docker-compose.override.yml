@@ -1,0 +1,21 @@
+services:
+  db_clickhouse:
+    image: clickhouse/clickhouse-server:25.8 #LTS
+
+    ports:
+      - "8125:8123" #HTTP
+      - "9003:9000" #TCP
+
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse # magazzino gestito da docker perchè senza /
+      # Se docker vede "/" => percorso
+
+    env_file:
+      - .env #environment non andava bene perchè docker compose non lo lancio io a mano ma astro
+
+    networks:
+      - airflow 
+
+volumes:
+  clickhouse_data: # presento il magazzzino a docker in modo che lui possa usarlo
+  # il magazzino ha lo stesso nome del volume
