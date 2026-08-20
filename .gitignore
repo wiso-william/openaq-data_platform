@@ -1,0 +1,27 @@
+# Environment
+.git
+.DS_Store
+airflow_settings.yaml
+__pycache__/
+astro
+.venv
+.astro/standalone/
+airflow-webserver.pid
+webserver_config.py
+airflow.cfg
+airflow.db
+.astro/*.local.yml
+.astro/*.local.yaml
+
+# Extras
+docs/
+
+# Output 
+include/dbt/openaq/target/
+include/dbt/openaq/logs/
+include/dbt/openaq/dbt_packages/
+.user.yml
+
+# Secrets
+.env
+scratch/ 
