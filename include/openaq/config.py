@@ -18,7 +18,6 @@ STATE_TABLE = "ingestion_state"
 
 BACKFILL_MONTHS_DEFAULT = 12
 
-# Creo le dataclass
 @dataclass(frozen=True) # frozen=True rende la dataclass immutabile dopo la creazione
 class OpenAQCredentials:
     """Come raggiungere e autenticarsi su OpenAQ.
@@ -47,7 +46,7 @@ class ClickHouseTarget:
     username: str
     password: str
 
-# Implemento Settings 
+
 @dataclass(frozen=True)
 class Settings:
     """Configurazione: cosa fare, non come autenticarsi.
