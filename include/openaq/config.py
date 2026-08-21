@@ -46,3 +46,47 @@ class ClickHouseTarget:
     port: int
     username: str
     password: str
+
+# Implemento Settings 
+@dataclass(frozen=True)
+class Settings:
+    """Configurazione: cosa fare, non come autenticarsi.
+
+    Le credenziali arrivano dalle Airflow Connection tramite `connections.py` e
+    non passano da qui. È questa separazione che permette a questo modulo
+    di girare senza contesto Airflow.
+
+    Attributes:
+        raw_database: Database ClickHouse del layer raw.
+        analytics_database: Database ClickHouse dei modelli dbt.
+        requests_per_minute: Tetto di richieste per singolo processo worker.
+        page_size: Righe per pagina sugli endpoint di OpenAQ.
+    """
+
+    raw_database: str = "openaq_raw"
+    analytics_database: str = "openaq_analytics"
+    requests_per_minute: int = 25
+    page_size: int = 1000
+
+    @classmethod
+    def from_env(cls, env: Mapping[str, str] | None = None) -> "Settings":
+        """Costruisce le impostazioni a partire da un ambiente.
+
+        Args:
+            env: Mapping da cui leggere. Se `None`, usa `os.environ`. Poterlo
+                passare è ciò che rende i test funzioni pure, senza toccare
+                l'ambiente reale.
+
+        Returns:
+            Un'istanza con i valori letti, o i default dove la chiave manca.
+        """
+        env = os.environ if env is None else env
+
+        return cls(
+            raw_database=env.get("CLICKHOUSE_RAW_DATABASE", "openaq_raw"),
+            analytics_database=env.get(
+                "CLICKHOUSE_ANALYTICS_DATABASE", "openaq_analytics"
+            ),
+            requests_per_minute=int(env.get("OPENAQ_REQUESTS_PER_MINUTE", "25")),
+            page_size=int(env.get("OPENAQ_PAGE_SIZE", "1000")),
+        )
