@@ -24,4 +24,4 @@ include/dbt/openaq/dbt_packages/
 
 # Secrets
 .env
-scratch/ 
+scratch/
