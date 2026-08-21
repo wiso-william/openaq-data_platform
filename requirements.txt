@@ -1,1 +1,2 @@
 # Astro Runtime includes the following pre-installed providers packages: https://www.astronomer.io/docs/astro/runtime-image-architecture#provider-packages
+clickhouse-connect>=0.8,<0.9
