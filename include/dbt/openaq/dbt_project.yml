@@ -1,0 +1,34 @@
+name: openaq
+version: "1.0.0"
+config-version: 2
+
+# Il profilo da cercare in profiles.yml
+profile: openaq
+
+# Le versioni di dbt con cui il progetto e stato scritto e verificato per renederlo riproducibile.
+require-dbt-version: [">=1.12.0", "<1.13.0"]
+
+# Sono già di default ma li dichiaro
+model-paths: ["models"]
+test-paths: ["tests"]
+
+flags:
+  send_anonymous_usage_stats: false
+
+vars:
+  local_timezone: "Europe/Rome"
+  # La normativa europea dice che per avere una media giornaliera valide è necessario che
+  # almeno il 75% delle ore del giorno abbiano misurazioni valide quindi 24*0.75=18 ore.
+  # Questo non si applica ai sensori a cadenza giornaliera: per loro un record e il giorno.
+  min_valid_hours_per_day: 18
+
+models:
+  openaq:
+    staging:
+      +materialized: view
+    # Intermediate per ora è una view, dopo aver costruito i modelli attribuisco la materializzazione più adatta
+    # Non metto ephemeral così posso vedere eventuali errori senza che li segnali sui marts.
+    intermediate:
+      +materialized: view
+    marts:
+      +materialized: table
