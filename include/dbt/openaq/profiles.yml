@@ -10,6 +10,7 @@ openaq:
       user: "{{ env_var('CLICKHOUSE_USER') }}"
       password: "{{ env_var('CLICKHOUSE_PASSWORD') }}"
 
+      # Schema per dbt è il database
       schema: "{{ env_var('CLICKHOUSE_ANALYTICS_DATABASE', 'openaq_analytics') }}"
 
       secure: false
