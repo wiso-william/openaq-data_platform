@@ -17,3 +17,32 @@ SENSOR_TABLE = "sensor"
 STATE_TABLE = "ingestion_state"
 
 BACKFILL_MONTHS_DEFAULT = 12
+
+# Creo le dataclass
+@dataclass(frozen=True) # frozen=True rende la dataclass immutabile dopo la creazione
+class OpenAQCredentials:
+    """Come raggiungere e autenticarsi su OpenAQ.
+
+    Attributes:
+        base_url: URL base dell'API, senza slash finale.
+        api_key: Chiave da mettere nell'header `X-API-Key`.
+    """
+
+    base_url: str
+    api_key: str
+
+@dataclass(frozen=True)
+class ClickHouseTarget:
+    """Come raggiungere e autenticarsi su ClickHouse.
+
+    Attributes:
+        host: Hostname o IP del server ClickHouse.
+        port: Porta TCP del server ClickHouse.
+        username: Nome utente per l'autenticazione.
+        password: Password per l'autenticazione.
+    """
+
+    host: str
+    port: int
+    username: str
+    password: str
