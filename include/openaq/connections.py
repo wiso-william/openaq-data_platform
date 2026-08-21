@@ -7,7 +7,6 @@ senza contesto e rapidamente.
 I value object stanno in `config.py` e non qui.
 
 I seguenti casi di test sono previsti e coperti:
-- La Connection non ha host: si usa il default.
 - La Connection ha uno slash finale nell'host: lo si rimuove.
 - La Connection non ha baseurl: si usa il default.
 - La Connection non ha password: si alza un'eccezione, perché senza chiave API
@@ -63,14 +62,14 @@ def openaq_credentials(conn_id: str = OPENAQ_CONN_ID) -> OpenAQCredentials:
     """
     conn = _get_connection(conn_id)
 
-    if not conn.password:
+    api_key = (conn.password or "").strip()
+
+    if not api_key:
         raise ValueError(f"La Connection {conn_id!r} non ha una chiave API")
 
-    base_url = conn.host or OPENAQ_BASE_URL
-    if base_url.endswith("/"):
-        base_url = base_url[:-1]
+    base_url = (conn.host or OPENAQ_BASE_URL).rstrip("/")
 
-    return OpenAQCredentials(base_url=base_url, api_key=conn.password)
+    return OpenAQCredentials(base_url=base_url, api_key=api_key)
 
 
 def clickhouse_target(conn_id: str = CLICKHOUSE_CONN_ID) -> ClickHouseTarget:
@@ -90,8 +89,8 @@ def clickhouse_target(conn_id: str = CLICKHOUSE_CONN_ID) -> ClickHouseTarget:
 
     conn = _get_connection(conn_id)
 
-    host = conn.host or "localhost"
-    port = conn.port or 8123
+    host = conn.host or "db_clickhouse"
+    port = int(conn.port or 8123)
     username = conn.login or "default"
     password = conn.password or ""
 
