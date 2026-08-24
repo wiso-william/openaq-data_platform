@@ -29,7 +29,7 @@ from typing import Any, Callable, Iterator
 
 import requests
 
-from include.openaq.config import API_KEY_HEADER, OPENAQ_BASE_URL
+from include.openaq.config import API_KEY_HEADER, COUNTRY_ISO, OPENAQ_BASE_URL, PARAMETER_BY_ID
 
 logger = logging.getLogger(__name__)
 
@@ -257,3 +257,58 @@ class OpenAQClient:
                 return
 
             page += 1
+
+
+    def iter_italian_pm_locations(
+        self, page_size: int = 1000
+    ) -> Iterator[list[dict[str, Any]]]:
+        """Pagine di location italiane che misurano PM10 o PM2.5.
+
+        `parameters_id` viene passato come **lista**: `requests` codifica una
+        lista ripetendo la chiave (`parameters_id=1&parameters_id=2`), che è la
+        forma attesa dall'API. Non va composta a mano: una stringa verrebbe
+        trattata come un valore unico e sottoposta a escaping.
+
+        Args:
+            page_size: Righe per pagina.
+
+        Yields:
+            Una lista di location per pagina.
+
+        Note:
+            `parameters_id` filtra le **location**, non i sensori restituiti
+            dentro ciascuna: una stazione arriva con dentro anche no2, o3, co.
+            Il 62% dei sensori restituiti non è PM, quindi il filtro per
+            `parameter.id` a valle non è un dettaglio, è obbligatorio.
+        """
+        path = "/locations"
+        params = {"iso": COUNTRY_ISO, "parameters_id": sorted(PARAMETER_BY_ID)}
+        yield from self.iter_pages(path=path, params=params, page_size=page_size)
+
+    def iter_hourly_measurements(
+        self,
+        sensor_id: int,
+        datetime_from: str,
+        datetime_to: str,
+        page_size: int = 1000,
+    ) -> Iterator[list[dict[str, Any]]]:
+        """Pagine di aggregati orari per un sensore, nella finestra data.
+
+        `/hours` è l'unico endpoint filtrabile per data: `/days` ignora
+        `datetime_from` e `datetime_to` e restituisce tutta la storia del
+        sensore. Un errore di battitura nel nome di questi due parametri non
+        produce un errore: l'API ignora i parametri che non conosce e risponde
+        senza finestra.
+
+        Args:
+            sensor_id: Id del sensore.
+            datetime_from: Estremo inferiore, incluso.
+            datetime_to: Estremo superiore.
+            page_size: Righe per pagina.
+
+        Yields:
+            Una lista di misure orarie per pagina.
+        """
+        path = f"/sensors/{sensor_id}/hours"
+        params = {"datetime_from": datetime_from, "datetime_to": datetime_to}
+        yield from self.iter_pages(path=path, params=params, page_size=page_size)
