@@ -204,3 +204,63 @@ def test_get_does_not_retry_on_422():
     # L'assert che conta: senza questo, il test passerebbe anche se il client
     # avesse riprovato cinque volte prima di arrendersi.
     assert len(session.calls) == 1
+
+
+def test_iter_pages_stops_when_a_page_is_not_full():
+    """Una pagina più corta del page_size è l'ultima.
+
+    I payload dichiarano `found: ">1000"` di proposito: un client che si
+    fidasse di quel campo continuerebbe a chiedere pagine, o esploderebbe
+    provando a confrontarlo con un intero.
+    """
+    session = FakeSession(
+        [
+            FakeResponse(
+                payload={"meta": {"found": ">1000"}, "results": [{"id": 0}, {"id": 1}]}
+            ),
+            FakeResponse(payload={"meta": {"found": ">1000"}, "results": [{"id": 99}]}),
+        ]
+    )
+    client, _ = _client_and_clock(session)
+
+    pages = list(client.iter_pages("/locations", {"iso": "IT"}, page_size=2))
+
+    assert pages == [[{"id": 0}, {"id": 1}], [{"id": 99}]]
+    assert [params["page"] for _, params in session.calls] == [1, 2]
+    assert [params["limit"] for _, params in session.calls] == [2, 2]
+    # I parametri del chiamante sopravvivono all'aggiunta di limit e page.
+    assert session.calls[0][1]["iso"] == "IT"
+
+
+def test_iter_pages_stops_on_an_empty_page():
+    """Una pagina vuota chiude l'iterazione e non viene restituita."""
+    session = FakeSession(
+        [
+            FakeResponse(payload={"meta": {}, "results": [{"id": 0}, {"id": 1}]}),
+            FakeResponse(payload={"meta": {}, "results": []}),
+        ]
+    )
+    client, _ = _client_and_clock(session)
+
+    pages = list(client.iter_pages("/locations", {}, page_size=2))
+
+    assert pages == [[{"id": 0}, {"id": 1}]]
+    assert len(session.calls) == 2
+
+
+def test_iter_pages_is_lazy():
+    """Il generatore non chiama nulla finché non gli si chiede una pagina.
+
+    È la proprietà che permette al chiamante di fermarsi a metà senza pagare le
+    richieste che non gli servono.
+    """
+    session = FakeSession([FakeResponse(payload={"meta": {}, "results": [{"id": 0}]})])
+    client, _ = _client_and_clock(session)
+
+    pages = client.iter_pages("/locations", {}, page_size=1000)
+
+    assert session.calls == []          # ancora nessuna richiesta
+
+    next(iter(pages))
+
+    assert len(session.calls) == 1
