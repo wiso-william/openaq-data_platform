@@ -14,12 +14,18 @@ OpenAQClient.get — casi coperti dai test:
 - 500 poi 502 poi 200: backoff esponenziale, 2s e poi 4s;
 - tentativi esauriti: OpenAQError con lo stato dentro il messaggio;
 - 422: nessun retry e una sola chiamata, la richiesta è malformata.
+
+OpenAQClient.iter_pages — casi coperti dai test:
+- pagina non piena: è l'ultima, si esce senza chiedere la successiva;
+- pagina vuota: non viene restituita al chiamante e chiude l'iterazione;
+- `meta.found` viene ignorato: ha tipo instabile (la *stringa* '>1000' con
+  limit piccoli, un intero con limit grandi), quindi non è un contatore.
 """
 
 import logging
 import time
 from collections import deque
-from typing import Any, Callable
+from typing import Any, Callable, Iterator
 
 import requests
 
@@ -212,3 +218,42 @@ class OpenAQClient:
                 continue
 
         return self._backoff_base * (2 ** (attempt - 1))
+
+    def iter_pages(
+        self,
+        path: str,
+        params: dict[str, Any],
+        page_size: int = 1000,
+    ) -> Iterator[list[dict[str, Any]]]:
+        """Itera le pagine di un endpoint di lista.
+
+        La condizione di uscita è la **lunghezza della pagina**, non
+        `meta.found`: quel campo ha tipo instabile — con `limit=1` vale la
+        stringa `'>1'`, con `limit=1000` l'intero `478` — quindi non è
+        utilizzabile come contatore. Una pagina più corta del `page_size`
+        richiesto è l'ultima, per costruzione.
+
+        Args:
+            path: Percorso dell'endpoint di lista, per esempio `/locations`.
+            params: Parametri di query, senza `limit` e `page`, che aggiunge
+                questo metodo.
+            page_size: Righe per pagina. Il massimo di OpenAQ è 1000 esatto:
+                1001 risponde 422.
+
+        Yields:
+            Una lista di risultati per ogni pagina non vuota.
+        """
+        page = 1
+        while True:
+            payload = self.get(path, {**params, "limit": page_size, "page": page})
+            results = payload.get("results") or []
+
+            # Una pagina vuota non viene restituita: il chiamante non deve
+            # gestire un caso che non porta informazione.
+            if results:
+                yield results
+
+            if len(results) < page_size:
+                return
+
+            page += 1
