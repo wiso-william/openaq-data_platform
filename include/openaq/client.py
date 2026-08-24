@@ -37,8 +37,29 @@ class RateLimiter:
         clock: Callable[[], float] = time.monotonic,
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
-        raise NotImplementedError
+        if max_calls < 1:
+            raise ValueError("max_calls deve essere almeno 1")
+
+        self._max_calls = max_calls
+        self._period = float(period_seconds)
+        self._clock = clock
+        self._sleep = sleep
+        self._calls: deque[float] = deque()
 
     def acquire(self) -> None:
         """Autorizza una richiesta, aspettando se la finestra è piena."""
-        raise NotImplementedError
+        self._evict_expired()
+
+        if len(self._calls) >= self._max_calls:
+            wait = self._period - (self._clock() - self._calls[0])
+            if wait > 0:
+                self._sleep(wait)
+            self._evict_expired()
+
+        self._calls.append(self._clock())
+
+    def _evict_expired(self) -> None:
+        """Togli dall'elenco gli orari usciti dalla finestra."""
+        cutoff = self._clock() - self._period
+        while self._calls and self._calls[0] <= cutoff:
+            self._calls.popleft()
